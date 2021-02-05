@@ -15,7 +15,7 @@ public class Attractor : MonoBehaviour
     public Rigidbody rb;
     public bool fixedPath = false;
     public Shader orbitShader;
-    private GameObject orbitLine;
+    public GameObject orbitLine;
     public Vector3 velocity;
     public EllipseRenderer renderer;
     public float radius;
@@ -55,12 +55,10 @@ public class Attractor : MonoBehaviour
     {
         futureVelocities = new Vector3[steps];
         futurePositions = new Vector3[steps];
-        orbitParameters();
+        OrbitParameters();
         rb.velocity += velocity;
         if (moving)
         {
-            orbitLine = new GameObject();
-            orbitLine.AddComponent<LineRenderer>();
             orbitLine.GetComponent<LineRenderer>().SetVertexCount(steps);
             drawOrbits();
             //orbitLine.GetComponent<LineRenderer>().materials
@@ -103,7 +101,7 @@ public class Attractor : MonoBehaviour
       
     }
 
-    private void orbitParameters()
+    private void OrbitParameters()
     {
         if(!moving)
             return;
@@ -115,28 +113,15 @@ public class Attractor : MonoBehaviour
         float micro = g * mass2;
         keneticEnergy = mass1 * velocity.magnitude * velocity.magnitude / 2;
         potenetialEnergy = g * mass2 * mass1 / r.magnitude;
-        float E =  mass1 * velocity.magnitude * velocity.magnitude/2 - g * mass2 * mass1 / r.magnitude;
-        Energy = E;
+        Energy =  mass1 * velocity.magnitude * velocity.magnitude/2 - g * mass2 * mass1 / r.magnitude;
         float l = Vector3.Cross(velocity, r).magnitude;
-        init_energy = E;
-        float a = -g*mass2*mass1/(2*E);
+        init_energy = Energy;
+        float a = -g*mass2*mass1/(2*Energy);
         float T = (float) Math.Sqrt(4 * Math.PI * Math.PI * a * a * a / (g * mass2));
-
-        float e = (float) Math.Sqrt(1 + 2 * E * l * l / (mass1 * mass1 * mass1 * micro * micro));
+        float e = (float) Math.Sqrt(1 + 2 * Energy * l * l / (mass1 * mass1 * mass1 * micro * micro));
         ecentricity = e;
-
-        float theta = (float) 0;
+        float theta = 0;
         float per = (l * l/ (mass1*micro)) * (1 / (1 + e * (float)Math.Cos(theta)));
-        /*Debug.Log(E);
-        Debug.Log(a);
-        Debug.Log(e);
-        Debug.Log(T);
-        Debug.Log(l);
-        Debug.Log(a*(1-e));
-        Debug.Log(micro);
-        Debug.Log(per);
-        Debug.Log((l * l/ (mass1*micro)) * (1 / (1 + e * (float)Math.Cos(Math.PI))));
-        Debug.Log(1 / (1 + e * (float)Math.Cos(theta)));*/
         apoapsis = (l * l / (mass1 * micro)) * (1 / (1 + e * (float) Math.Cos(Math.PI)));
         periapsis = per;
         //Does work if sat mass is not 1
@@ -145,24 +130,27 @@ public class Attractor : MonoBehaviour
         semiMinor = Mathf.Sqrt(semiMajor*semiMajor*(1-e*e)); 
         float radi = radius;
         theta = Mathf.Acos(l * l / (radi * mass1 * mass1 * micro * e) - 1 / e);
-        Debug.Log(Mathf.Rad2Deg*theta);
-        Debug.Log(Mathf.Rad2Deg* ( Mathf.PI - theta));
-        //Control the side of the ellipse by flipping the y axis
-        //Find this by knowing if the object is on top or bottom of ellipse?
+
         Vector3 p2 = new Vector3(radius*Mathf.Cos(theta),0,radius*Mathf.Sin(Mathf.PI+theta));
-        print(p2);
+        print(Vector3.Dot(r, velocity) > 0);
+        print(Vector3.Dot(r, velocity));
+        //true if descending
+        renderer.ellipse.orbitSide = 1;
+        if (Vector3.Dot(r, velocity) > 0)
+        {
+            renderer.ellipse.orbitSide = -1f;
+            p2 = new Vector3(radius * Mathf.Cos(theta), 0, radius * Mathf.Sin(theta));
+        }
+        
         theta = Mathf.Acos((2 * radius * radius - Vector3.Distance(transform.position, p2)*Vector3.Distance(transform.position, p2)) / 
                            (2 * radius * radius));
-        print(Mathf.Rad2Deg* theta);
+        //print(Mathf.Rad2Deg* theta);
         renderer.ellipse.offsetPoint = orbitingBody.transform.position;
         renderer.ellipse.offsetAngle = theta;
         renderer.ellipse.xAxis = semiMajor;
         renderer.ellipse.yAxis = semiMinor;
         renderer.ellipse.offset.x = orbitingBody.transform.position.x-semiMajor+periapsis;
         renderer.ellipse.offset.y = orbitingBody.transform.position.z;
-        
-        print(renderer.ellipse.offsetPoint);
-        print(renderer.ellipse.offsetAngle);
         renderer.CalculateEllipse();
         //What position in the orbit am I in? How do I return a future x,y cord?
     }
@@ -200,27 +188,17 @@ public class Attractor : MonoBehaviour
             futureVelocities[i] = startVel;
             startPos = endPos;
         }
+
         LineRenderer lr = orbitLine.GetComponent<LineRenderer>();
         lr.material =  new Material(Shader.Find("Unlit/Texture"));
         lr.SetColors(Color.red, Color.red);
         lr.SetWidth(5f, 5f);
         lr.SetPositions(futurePositions);
-        
-    }
-    
-    void DrawLine(Vector3 start, Vector3 end, Color color, int poolingIndex, float duration = 0.2f)
-    {
-        LineRenderer lr = orbitLine.GetComponent<LineRenderer>();
-        lr.material =  new Material(Shader.Find("Unlit/Texture"));
-        lr.SetColors(color, color);
-        lr.SetWidth(1f, 1f);
-        lr.SetPosition(poolingIndex, start);
-        lr.SetPosition(poolingIndex+1, end);
     }
 
     private void OnValidate()
     {
         load();
-        orbitParameters();
+        OrbitParameters();
     }
 }

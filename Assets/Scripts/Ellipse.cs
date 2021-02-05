@@ -9,6 +9,7 @@ using UnityEngine;
         public float xAxis;
         public float yAxis;
         public Vector3 offsetPoint;
+        public float orbitSide;
 
         public Ellipse(float xAxis, float yAxis)
         {
@@ -28,8 +29,8 @@ using UnityEngine;
             //y *= Mathf.Sin(offsetAngle);
             //x += radius * Mathf.Cos(offsetAngle);
             //y += radius * Mathf.Sin(offsetAngle);
-            float x_n = Mathf.Cos(-offsetAngle) * (x - offsetPoint.x) - (y - offsetPoint.y)*Mathf.Sin(-offsetAngle) + offsetPoint.x;
-            float y_n = Mathf.Sin(-offsetAngle) * (x - offsetPoint.x) + (y - offsetPoint.y)*Mathf.Cos(-offsetAngle) + offsetPoint.y;
+            float x_n = Mathf.Cos(-offsetAngle*orbitSide) * (x - offsetPoint.x) - (y - offsetPoint.y)*Mathf.Sin(-offsetAngle*orbitSide) + offsetPoint.x;
+            float y_n = Mathf.Sin(-offsetAngle*orbitSide) * (x - offsetPoint.x) + (y - offsetPoint.y)*Mathf.Cos(-offsetAngle*orbitSide) + offsetPoint.y;
             x = x_n;
             y = y_n;
             return new Vector2(x, y);
