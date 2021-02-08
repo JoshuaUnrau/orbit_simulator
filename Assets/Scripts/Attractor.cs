@@ -37,9 +37,13 @@ public class Attractor : MonoBehaviour
     
     public bool moving = false;
     private int futureOrbits = 0;
+    public float theta;
+    public float beta;
     public int steps = 10000;
+    public int steps_per_frame = 100;
     public float timeStep = 0.001f;
     public float g = 1000;
+    public bool ccw;
 
     Vector3[] futurePositions;
     Vector3[] futureVelocities;
@@ -74,8 +78,12 @@ public class Attractor : MonoBehaviour
         {
             //Deltas are too large
             velocity = futureVelocities[futureOrbits];
-            transform.position = futurePositions[futureOrbits];
-            futureOrbits++;
+            if (futurePositions[futureOrbits] != null)
+            {
+                transform.position = futurePositions[futureOrbits];
+            }
+            OrbitParameters();
+            futureOrbits += steps_per_frame;
         }
 
         if (moving)
@@ -120,8 +128,7 @@ public class Attractor : MonoBehaviour
         float T = (float) Math.Sqrt(4 * Math.PI * Math.PI * a * a * a / (g * mass2));
         float e = (float) Math.Sqrt(1 + 2 * Energy * l * l / (mass1 * mass1 * mass1 * micro * micro));
         ecentricity = e;
-        float theta = 0;
-        float per = (l * l/ (mass1*micro)) * (1 / (1 + e * (float)Math.Cos(theta)));
+        float per = (l * l/ (mass1*micro)) * (1 / (1 + e * (float)Math.Cos(0)));
         apoapsis = (l * l / (mass1 * micro)) * (1 / (1 + e * (float) Math.Cos(Math.PI)));
         periapsis = per;
         //Does work if sat mass is not 1
@@ -130,28 +137,57 @@ public class Attractor : MonoBehaviour
         semiMinor = Mathf.Sqrt(semiMajor*semiMajor*(1-e*e)); 
         float radi = radius;
         theta = Mathf.Acos(l * l / (radi * mass1 * mass1 * micro * e) - 1 / e);
-
+        beta = Mathf.Acos(Vector3.Dot(new Vector3(1, 0, 0), r)/r.magnitude);
+        //theta = Mathf.Acos(l * l / (apoapsis * mass1 * mass1 * micro * e) - 1 / e);
+        print(Mathf.Rad2Deg* theta);
+        print(theta);
         Vector3 p2 = new Vector3(radius*Mathf.Cos(theta),0,radius*Mathf.Sin(Mathf.PI+theta));
-        print(Vector3.Dot(r, velocity) > 0);
-        print(Vector3.Dot(r, velocity));
-        //true if descending
-        renderer.ellipse.orbitSide = 1;
-        if (Vector3.Dot(r, velocity) > 0)
+        //true if ccw (negative ccw)
+        renderer.ellipse.orbitSide = -1f;
+        print(Vector3.Dot(Vector3.Cross(r, velocity), new Vector3(0,1,0)));
+        float orbitSide = 1;
+        float clockWise = 1;
+        ccw = Vector3.Dot(Vector3.Cross(r, velocity), new Vector3(0, 1, 0)) > 0;
+        if (ccw)
         {
-            renderer.ellipse.orbitSide = -1f;
-            p2 = new Vector3(radius * Mathf.Cos(theta), 0, radius * Mathf.Sin(theta));
+            clockWise *= -1;
+            //renderer.ellipse.orbitSide = 1f;
+            //p2 = new Vector3(radius * Mathf.Cos(theta), 0, radius * Mathf.Sin(theta));
+            //renderer.ellipse.orbitSide *= -1f;
+            //true if descending
+            if (Vector3.Dot(r, velocity) > 0)
+            {
+                orbitSide = -1;
+            }
         }
-        
-        theta = Mathf.Acos((2 * radius * radius - Vector3.Distance(transform.position, p2)*Vector3.Distance(transform.position, p2)) / 
-                           (2 * radius * radius));
+        else
+        {
+            orbitSide = -1;
+            if (Vector3.Dot(r, velocity) > 0)
+            {
+                orbitSide = 1;
+            }
+        }
+
+        //theta *= clockWise;
+        theta *= orbitSide;
+        beta *= -Mathf.Sign(r.z);
+        //renderer.ellipse.offsetAngle = -beta + theta - Mathf.PI;
+        renderer.ellipse.offsetAngle = -beta + Mathf.PI - theta;
+        //theta = Mathf.Acos((2 * radius * radius - Vector3.Distance(transform.position, p2)*Vector3.Distance(transform.position, p2)) / 
+        //                   (2 * radius * radius));
+        //theta = Mathf.Acos((2 * radius * radius - Vector3.Distance(transform.position, p2)*Vector3.Distance(transform.position, p2)) / (2 * radius * radius));
+        print(Mathf.Rad2Deg* theta);
+        print(theta);
         //print(Mathf.Rad2Deg* theta);
         renderer.ellipse.offsetPoint = orbitingBody.transform.position;
-        renderer.ellipse.offsetAngle = theta;
         renderer.ellipse.xAxis = semiMajor;
         renderer.ellipse.yAxis = semiMinor;
         renderer.ellipse.offset.x = orbitingBody.transform.position.x-semiMajor+periapsis;
         renderer.ellipse.offset.y = orbitingBody.transform.position.z;
         renderer.CalculateEllipse();
+        theta = Mathf.Rad2Deg*theta;
+        beta = Mathf.Rad2Deg*beta;
         //What position in the orbit am I in? How do I return a future x,y cord?
     }
 
@@ -198,7 +234,10 @@ public class Attractor : MonoBehaviour
 
     private void OnValidate()
     {
-        load();
-        OrbitParameters();
+        //if (orbitingBody)
+        //{
+            load();
+            OrbitParameters();
+        //}
     }
 }
